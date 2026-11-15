@@ -47,6 +47,15 @@ DETECTOR_MODEL = os.getenv("AI201_DETECTOR_MODEL", "gpt2")
 DETECTOR_MAX_TOKENS = 400
 
 
+# ─── Input limits ────────────────────────────────────────────────────────────
+# Longest `text` /submit accepts, in characters. Longer requests get a 413.
+# The detector only reads the first DETECTOR_MAX_TOKENS anyway; this cap keeps
+# a huge body from tying up the style signal and filling the log.
+# Placeholder until criteria.md settles the bad-input target.
+
+MAX_TEXT_CHARS = 20_000
+
+
 # ─── Scoring (Milestone 4) ───────────────────────────────────────────────────
 # How much each signal counts toward the combined score.
 #

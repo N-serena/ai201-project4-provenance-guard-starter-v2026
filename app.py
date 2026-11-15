@@ -199,17 +199,47 @@ def submit():
     what should this do when `text` is missing, empty, or enormous? A crash on
     a malformed input is one of the most common real failures there is.
     """
-    payload = request.get_json(silent=True) or {}
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        return _reject("unknown", "invalid_json", 400,
+                       "Send a JSON object with 'text' and 'creator_id'.")
 
-    # TODO: delete this and build the route.
+    creator_id = payload.get("creator_id")
+    text = payload.get("text")
+    who = creator_id if isinstance(creator_id, str) and creator_id.strip() else "unknown"
+
+    if not isinstance(creator_id, str) or not creator_id.strip():
+        return _reject(who, "missing_creator_id", 400,
+                       "'creator_id' is required and must be a non-empty string.")
+    if not isinstance(text, str):
+        return _reject(who, "missing_text", 400,
+                       "'text' is required and must be a string.")
+    if not text.strip():
+        return _reject(who, "empty_text", 400,
+                       "'text' is empty. Send the writing you want checked.")
+    if len(text) > config.MAX_TEXT_CHARS:
+        return _reject(who, "text_too_long", 413,
+                       f"'text' is {len(text)} characters; the limit is "
+                       f"{config.MAX_TEXT_CHARS}.", length=len(text))
+
+    # Milestone 3a: the route answers with the full response shape.
+    # Scores and label are placeholders until the signals are wired in (3b–5a).
     return jsonify({
-        "error": "not_implemented",
-        "message": "POST /submit isn't built yet — see the TODO in app.py.",
-        "you_sent": {
-            "text_length": len(payload.get("text", "")),
-            "creator_id": payload.get("creator_id"),
-        },
-    }), 501
+        "content_id": str(uuid.uuid4()),
+        "creator_id": creator_id,
+        "guess": "unsure",
+        "confidence": None,
+        "label": "PLACEHOLDER — no signals wired in yet.",
+        "model_score": None,
+        "style_score": None,
+        "status": "decided",
+    })
+
+
+def _reject(creator_id: str, reason: str, status: int, message: str, **extra):
+    """Log a refused request and return the JSON error a caller sees."""
+    audit.log_rejection(creator_id=creator_id, reason=reason, **extra)
+    return jsonify({"error": reason, "message": message}), status
 
 
 @app.post("/appeal")

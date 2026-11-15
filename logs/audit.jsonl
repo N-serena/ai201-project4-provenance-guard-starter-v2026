@@ -1,0 +1,7 @@
+{"timestamp": "2026-11-15T00:24:30+00:00", "creator_id": "unknown", "event": "rejected", "status": "rejected", "reason": "invalid_json"}
+{"timestamp": "2026-11-15T00:24:30+00:00", "creator_id": "unknown", "event": "rejected", "status": "rejected", "reason": "invalid_json"}
+{"timestamp": "2026-11-15T00:24:30+00:00", "creator_id": "unknown", "event": "rejected", "status": "rejected", "reason": "missing_creator_id"}
+{"timestamp": "2026-11-15T00:24:30+00:00", "creator_id": "serena", "event": "rejected", "status": "rejected", "reason": "missing_text"}
+{"timestamp": "2026-11-15T00:24:30+00:00", "creator_id": "serena", "event": "rejected", "status": "rejected", "reason": "missing_text"}
+{"timestamp": "2026-11-15T00:24:30+00:00", "creator_id": "serena", "event": "rejected", "status": "rejected", "reason": "empty_text"}
+{"timestamp": "2026-11-15T00:24:30+00:00", "creator_id": "serena", "event": "rejected", "status": "rejected", "reason": "text_too_long", "length": 20001}
