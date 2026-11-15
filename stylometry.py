@@ -33,6 +33,31 @@ anything together:
 import re
 import statistics
 
+# Window size for the moving-average type-token ratio.
+TTR_WINDOW = 40
+
+# Punctuation counted by punctuation_density: marks whose use varies by writer.
+# Includes the straight and curly apostrophe, since contractions are one of them.
+EXPRESSIVE_PUNCTUATION = set(";:!?()'\"…’‘“”")
+
+# (ai_end, human_end) for each measure: the raw value that maps to 1.0 (AI-like)
+# and the one that maps to 0.0 (human-like). Set from the four calibration
+# inputs on 2026-11-15; see docs/DECISIONS.md.
+STYLE_RANGES = {
+    "spread": (0.20, 0.60),
+    "ttr": (0.65, 0.85),
+    "punct": (0.00, 0.05),
+}
+
+# How much each measure counts toward style_signal.
+# TTR is 0: on the calibration inputs the chatbot text had more varied
+# vocabulary than the human text, so it pointed the wrong way.
+STYLE_WEIGHTS = {
+    "spread": 0.6,
+    "ttr": 0.0,
+    "punct": 0.4,
+}
+
 
 def sentences(text: str) -> list[str]:
     """Split into sentences. Rough and good enough — given to you."""
@@ -63,9 +88,18 @@ def sentence_length_spread(text: str) -> float:
     Watch the edge case: a one-sentence submission has no spread at all, and
     `stdev` raises on fewer than two values. Decide what that should return
     before the attack set decides for you.
+
+    Built: coefficient of variation of sentence lengths in words (stdev / mean).
+    0 means every sentence is the same length; higher means more varied, which
+    points human. Fewer than two sentences returns 0.0, and `style_signal`
+    treats that case as no evidence either way.
     """
-    # TODO: replace this
-    return 0.0
+    lengths = [len(words(s)) for s in sentences(text)]
+    lengths = [n for n in lengths if n > 0]
+    if len(lengths) < 2:
+        return 0.0
+    mean = statistics.mean(lengths)
+    return round(statistics.stdev(lengths) / mean, 4)
 
 
 def type_token_ratio(text: str) -> float:
@@ -79,9 +113,22 @@ def type_token_ratio(text: str) -> float:
     longer, because common words repeat. Two texts of different lengths aren't
     directly comparable on it, and if your test inputs vary a lot in length,
     that alone can look like a signal.
+
+    Built: moving-average TTR. The ratio is taken over every window of
+    TTR_WINDOW consecutive words and averaged, so a 300-word text and a
+    40-word one are measured on the same footing. Texts shorter than the
+    window use the plain ratio.
     """
-    # TODO: replace this
-    return 0.0
+    ws = words(text)
+    if not ws:
+        return 0.0
+    if len(ws) <= TTR_WINDOW:
+        return round(len(set(ws)) / len(ws), 4)
+    ratios = [
+        len(set(ws[i:i + TTR_WINDOW])) / TTR_WINDOW
+        for i in range(len(ws) - TTR_WINDOW + 1)
+    ]
+    return round(statistics.mean(ratios), 4)
 
 
 def punctuation_density(text: str) -> float:
@@ -93,9 +140,17 @@ def punctuation_density(text: str) -> float:
         semicolons, dashes — is a real choice. Semicolons and em dashes are
         more interesting than full stops, because they vary more between
         writers.
+
+    Built: marks from EXPRESSIVE_PUNCTUATION per word. Full stops and commas
+    are left out because nearly every writer uses them at similar rates.
+    Em dashes are left out because current chatbots use them heavily, so they
+    would point the wrong way. Higher means more expressive, which points human.
     """
-    # TODO: replace this
-    return 0.0
+    ws = words(text)
+    if not ws:
+        return 0.0
+    marks = sum(1 for ch in text if ch in EXPRESSIVE_PUNCTUATION)
+    return round(marks / len(ws), 4)
 
 
 # ── Combining them ───────────────────────────────────────────────────────────
@@ -121,9 +176,36 @@ def style_signal(text: str) -> float:
     clearly human, plain conventional human writing, lightly-edited AI — before
     you trust it. Plain and ordinary, not formal: formal prose reads as *human*
     to signal one, and it is plain writing that gets accused.
+
+    Built: each measure is mapped onto 0–1 (1 = AI-like) by a straight line
+    between the two ends in STYLE_RANGES, clipped at both ends, then the
+    three are averaged with STYLE_WEIGHTS. All three measures point human
+    when high, so each mapping flips them. A text with fewer than two
+    sentences has no spread to measure, so that part scores 0.5.
     """
-    # TODO: replace this
-    return 0.5
+    parts = style_parts(text)
+    total = sum(STYLE_WEIGHTS.values())
+    score = sum(STYLE_WEIGHTS[k] * parts[k] for k in STYLE_WEIGHTS) / total
+    return round(score, 4)
+
+
+def style_parts(text: str) -> dict[str, float]:
+    """Each measure on the 0–1 AI-likeness scale, before weighting."""
+    spread = (
+        _ai_like(sentence_length_spread(text), *STYLE_RANGES["spread"])
+        if len(sentences(text)) >= 2 else 0.5
+    )
+    return {
+        "spread": spread,
+        "ttr": _ai_like(type_token_ratio(text), *STYLE_RANGES["ttr"]),
+        "punct": _ai_like(punctuation_density(text), *STYLE_RANGES["punct"]),
+    }
+
+
+def _ai_like(value: float, ai_end: float, human_end: float) -> float:
+    """1.0 at or below ai_end, 0.0 at or above human_end, linear between."""
+    fraction = (human_end - value) / (human_end - ai_end)
+    return round(min(max(fraction, 0.0), 1.0), 4)
 
 
 if __name__ == "__main__":
@@ -139,4 +221,5 @@ if __name__ == "__main__":
     print(f"type_token_ratio         {type_token_ratio(text)}")
     print(f"punctuation_density      {punctuation_density(text)}")
     print(f"style_signal             {style_signal(text)}   (higher = more likely AI)")
-    print("\nAll zeros? These are stubs — Milestone 4 is where you build them.")
+    print(f"  parts (1 = AI-like)    {style_parts(text)}")
+    print(f"  weights                {STYLE_WEIGHTS}")
