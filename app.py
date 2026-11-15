@@ -30,6 +30,7 @@ from flask import Flask, jsonify, request
 
 import audit
 import config
+import detector
 
 app = Flask(__name__)
 
@@ -222,16 +223,42 @@ def submit():
                        f"'text' is {len(text)} characters; the limit is "
                        f"{config.MAX_TEXT_CHARS}.", length=len(text))
 
-    # Milestone 3a: the route answers with the full response shape.
-    # Scores and label are placeholders until the signals are wired in (3b–5a).
+    try:
+        model_score = detector.model_signal(text)
+    except ValueError:
+        return _reject(who, "text_too_short", 400,
+                       "'text' is too short to judge. Send at least a sentence or two.")
+    except detector.DetectorUnavailable:
+        return _reject(who, "detector_unavailable", 503,
+                       "The detector model isn't loaded. Run `python detector.py` once.")
+
+    # Placeholders until the style signal (4a), combining rule (4b) and labels (5a).
+    style_score = None
+    confidence = None
+    guess = None
+    label = "PLACEHOLDER — label not written yet."
+
+    content_id = str(uuid.uuid4())
+    audit.log_decision(
+        content_id=content_id,
+        creator_id=creator_id,
+        guess=guess,
+        model_score=model_score,
+        style_score=style_score,
+        combined_score=confidence,
+        label=label,
+        status="decided",
+        word_count=len(text.split()),
+    )
+
     return jsonify({
-        "content_id": str(uuid.uuid4()),
+        "content_id": content_id,
         "creator_id": creator_id,
-        "guess": "unsure",
-        "confidence": None,
-        "label": "PLACEHOLDER — no signals wired in yet.",
-        "model_score": None,
-        "style_score": None,
+        "guess": guess,
+        "confidence": confidence,
+        "label": label,
+        "model_score": model_score,
+        "style_score": style_score,
         "status": "decided",
     })
 
