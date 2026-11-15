@@ -14,9 +14,9 @@ before step 3b).
 |---|---|---|---|
 | 0 | Setup: install requirements, `test.py`, `detector.py`, these docs | Claude | done |
 | 1 | M1 — trace, signals + blind spots, false-positive walkthrough, endpoint contract | me (Claude reviews) | done — `docs/milestone1.md` |
-| 2 | M2 — `criteria.md`, five criteria with targets and reasons | me (Claude reviews) | next — must land before 3b |
+| 2 | M2 — `criteria.md`, five criteria with targets and reasons | me (Claude reviews) | done — commit before 3b |
 | 3a | M3 — `/submit` answers: placeholder response, payload parsing, bad-input handling | Claude | done (no scores produced) |
-| 3b | M3 — signal one wired in, `content_id`, audit log entry | Claude | pending |
+| 3b | M3 — signal one wired in, `content_id`, audit log entry, `text_too_short` 400 | Claude | next |
 | 4a | M4 — `stylometry.py` measures + `style_signal`, four calibration inputs | Claude | pending |
 | 4b | M4 — combining rule (I write it in words; Claude codes it), both scores logged | both | pending |
 | 5a | M5 — three label texts (me), `score_to_label` + thresholds (Claude) | both | pending |

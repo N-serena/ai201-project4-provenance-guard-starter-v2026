@@ -93,6 +93,7 @@ Errors: each returns `{"error": code, "message": text}` and is logged as a rejec
 | `text` missing or not a string | 400 | `missing_text` |
 | `text` blank | 400 | `empty_text` |
 | `text` over 20 000 characters | 413 | `text_too_long` |
+| `text` too short for the detector to score | 400 | `text_too_short` (added in step 3b) |
 
 ### POST /appeal
 
