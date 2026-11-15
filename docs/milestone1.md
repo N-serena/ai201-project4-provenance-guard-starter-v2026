@@ -64,8 +64,8 @@ protect.
 
 ## 4. The two endpoints
 
-*Still to confirm.* This is what `/submit` does now (step 3a), plus open questions for
-`/appeal`.
+`/submit` is what the service does now (step 3a). `/appeal` is what I decided on
+2026-11-15: "confirm with status, 404 if not found, no empty reasoning."
 
 ### POST /submit
 
@@ -98,7 +98,22 @@ Errors: each returns `{"error": code, "message": text}` and is logged as a rejec
 
 In: `{"content_id": string, "reasoning": string}`
 
-Open questions for me:
-- What does the writer get back when it works?
-- What happens if the `content_id` doesn't exist?
-- Is empty `reasoning` allowed?
+Out (200): a confirmation carrying the new status.
+
+| Field | Type | Meaning |
+|---|---|---|
+| `content_id` | string | The submission being appealed |
+| `status` | string | `"under_review"` |
+| `message` | string | Plain-words confirmation that the appeal was received |
+
+The appeal is written to the log after the original decision. The decision itself is never
+changed or removed.
+
+Errors: same `{"error": code, "message": text}` shape as `/submit`.
+
+| Case | Status | `error` |
+|---|---|---|
+| Body isn't a JSON object | 400 | `invalid_json` |
+| `content_id` missing or blank | 400 | `missing_content_id` |
+| `reasoning` missing, not a string, or blank | 400 | `empty_reasoning` |
+| `content_id` not in the log | 404 | `content_not_found` |
