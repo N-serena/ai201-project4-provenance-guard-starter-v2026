@@ -20,8 +20,8 @@ before step 3b).
 | 4a | M4 — `stylometry.py` measures + `style_signal`, four calibration inputs | Claude | done — see DECISIONS |
 | 4b | M4 — combining rule (I write it in words; Claude codes it), both scores logged | both | done — see DECISIONS |
 | 5a | M5 — three label texts (me), `score_to_label` + thresholds (Claude) | both | done — see DECISIONS |
-| 5b | M5 — `/appeal` | Claude | next |
-| 6 | M6 — README write-up, checklist, submit fork URL | me (Claude checks claims vs code) | pending |
+| 5b | M5 — `/appeal` | Claude | done — README Sample Run filled |
+| 6 | M6 — README write-up, checklist, submit fork URL | me (Claude checks claims vs code) | next |
 | — | Stretch: `GET /content/<id>` (decide after 5b; declare in README first) | — | undecided |
 
 ## Session notes
@@ -41,6 +41,12 @@ before step 3b).
   `detector_unavailable`. Each decision is logged with `word_count` as an extra field (for
   criterion 1's short/long split). README Sample Run is filled in at 5b, once the response
   is final.
+
+- 2026-11-16, step 5b: `/appeal` follows the Milestone 1 contract. Only a logged decision
+  can be appealed; rejections are stored with `requested_content_id`, so a fake id stays a
+  404 on every try. Repeat appeals on one id are each recorded. Appeal rejections are
+  logged with `endpoint: "appeal"`. The confirmation message text is Claude's draft, so I
+  can reword it.
 
 ## Fixed contract points
 

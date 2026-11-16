@@ -291,14 +291,43 @@ def appeal():
     to the person on the other end. It's the only thing standing between a
     wrong accusation and nothing at all.
     """
-    payload = request.get_json(silent=True) or {}
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        return _reject("unknown", "invalid_json", 400,
+                       "Send a JSON object with 'content_id' and 'reasoning'.",
+                       endpoint="appeal")
 
-    # TODO: delete this and build the route.
+    content_id = payload.get("content_id")
+    reasoning = payload.get("reasoning")
+
+    if not isinstance(content_id, str) or not content_id.strip():
+        return _reject("unknown", "missing_content_id", 400,
+                       "'content_id' is required. It's in the response you got from /submit.",
+                       endpoint="appeal")
+    content_id = content_id.strip()
+
+    # Only a logged decision can be appealed. Rejections and earlier appeals don't count.
+    decisions = [e for e in audit.entries_for(content_id) if e.get("event") is None]
+    if not decisions:
+        # Stored under another key so a later appeal can't match this rejection.
+        return _reject("unknown", "content_not_found", 404,
+                       f"No submission has the content_id '{content_id}'.",
+                       endpoint="appeal", requested_content_id=content_id)
+    creator_id = decisions[0].get("creator_id", "unknown")
+
+    if not isinstance(reasoning, str) or not reasoning.strip():
+        return _reject(creator_id, "empty_reasoning", 400,
+                       "'reasoning' is required. Tell us why you think the label is wrong.",
+                       endpoint="appeal", requested_content_id=content_id)
+
+    audit.log_appeal(content_id=content_id, creator_id=creator_id,
+                     reasoning=reasoning.strip())
+
     return jsonify({
-        "error": "not_implemented",
-        "message": "POST /appeal isn't built yet — see the TODO in app.py.",
-        "you_sent": payload,
-    }), 501
+        "content_id": content_id,
+        "status": "under_review",
+        "message": "We've received your appeal and marked this piece as under review.",
+    })
 
 
 # ── Already works ─────────────────────────────────────────────────────────────

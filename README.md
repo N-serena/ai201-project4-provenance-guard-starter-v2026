@@ -124,11 +124,20 @@
 ```bash
 $ curl -X POST http://127.0.0.1:5000/submit \
   -H "Content-Type: application/json" \
-  -d '{"text": "...", "creator_id": "..."}'
+  -d '{"text": "Writing is a powerful tool for self-expression and communication. It allows individuals to share their thoughts, ideas, and experiences with others in a meaningful way. Additionally, writing can help people develop critical thinking skills and improve their ability to communicate effectively.", "creator_id": "sample_writer"}'
 ```
 
 ```json
-
+{
+  "confidence": 0.938,
+  "content_id": "e3a8c193-5425-43e8-8d6a-89c9763fc7b4",
+  "creator_id": "sample_writer",
+  "guess": "ai",
+  "label": "We think this might be AI, you can appeal.",
+  "model_score": 0.9471,
+  "status": "decided",
+  "style_score": 0.9289
+}
 ```
 
 **An appeal**
@@ -136,22 +145,55 @@ $ curl -X POST http://127.0.0.1:5000/submit \
 ```bash
 $ curl -X POST http://127.0.0.1:5000/appeal \
   -H "Content-Type: application/json" \
-  -d '{"content_id": "...", "reasoning": "..."}'
+  -d '{"content_id": "e3a8c193-5425-43e8-8d6a-89c9763fc7b4", "reasoning": "Sample-run appeal for the README: this is a demonstration of the appeal path on a piece labelled AI."}'
 ```
 
 ```json
-
+{
+  "content_id": "e3a8c193-5425-43e8-8d6a-89c9763fc7b4",
+  "message": "We've received your appeal and marked this piece as under review.",
+  "status": "under_review"
+}
 ```
 
 **What the log shows afterwards**
 
 ```bash
-$ curl "http://127.0.0.1:5000/log?limit=3"
+$ curl "http://127.0.0.1:5000/log?limit=2"
 ```
 
 ```json
-
+{
+  "count": 2,
+  "entries": [
+    {
+      "combined_score": 0.938,
+      "content_id": "e3a8c193-5425-43e8-8d6a-89c9763fc7b4",
+      "creator_id": "sample_writer",
+      "guess": "ai",
+      "label": "We think this might be AI, you can appeal.",
+      "model_score": 0.9471,
+      "signals_disagree": false,
+      "status": "decided",
+      "style_score": 0.9289,
+      "timestamp": "2026-11-16T00:11:42+00:00",
+      "word_count": 41
+    },
+    {
+      "content_id": "e3a8c193-5425-43e8-8d6a-89c9763fc7b4",
+      "creator_id": "sample_writer",
+      "event": "appeal",
+      "reasoning": "Sample-run appeal for the README: this is a demonstration of the appeal path on a piece labelled AI.",
+      "status": "under_review",
+      "timestamp": "2026-11-16T00:11:42+00:00"
+    }
+  ]
+}
 ```
+
+The original decision stays in the log unchanged; the appeal is a new entry after it with
+`status: under_review`. An unknown `content_id` returns `404 content_not_found`, and blank
+reasoning returns `400 empty_reasoning`.
 
 ---
 
