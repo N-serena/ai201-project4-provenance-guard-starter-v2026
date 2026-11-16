@@ -66,6 +66,11 @@ MAX_TEXT_CHARS = 20_000
 WEIGHT_MODEL_SIGNAL = 0.5
 WEIGHT_STYLE_SIGNAL = 0.5
 
+# When the two signals are further apart than this, they disagree, and the
+# combined score is the lower (more human) of the two. The weights above apply
+# only when they agree.
+DISAGREEMENT_GAP = 0.3
+
 
 # ─── Thresholds (Milestone 5) ────────────────────────────────────────────────
 # Where one label becomes another. Scores run 0.0 (confidently human) to 1.0

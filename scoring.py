@@ -51,12 +51,26 @@ def combine_signals(model_score: float, style_score: float) -> float:
 
     The weights in config.py are placeholders. Change them, or ignore them and
     write a different rule.
+
+    My rule: lean toward the writer when the signals disagree.
+      - Within DISAGREEMENT_GAP of each other: they agree, so take the
+        weighted average (WEIGHT_MODEL_SIGNAL, WEIGHT_STYLE_SIGNAL).
+      - Further apart: they disagree, so take the lower score. The system
+        only leans AI when both signals point that way.
     """
-    # TODO: replace this
-    return (
+    if signals_disagree(model_score, style_score):
+        return round(min(model_score, style_score), 4)
+    total = config.WEIGHT_MODEL_SIGNAL + config.WEIGHT_STYLE_SIGNAL
+    combined = (
         config.WEIGHT_MODEL_SIGNAL * model_score
         + config.WEIGHT_STYLE_SIGNAL * style_score
-    )
+    ) / total
+    return round(combined, 4)
+
+
+def signals_disagree(model_score: float, style_score: float) -> bool:
+    """True when the two signals are further apart than DISAGREEMENT_GAP."""
+    return abs(model_score - style_score) > config.DISAGREEMENT_GAP
 
 
 def score_to_label(score: float) -> tuple[str, str]:

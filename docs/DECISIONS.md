@@ -4,6 +4,34 @@ Newest first. Each entry: the decision, the date, and why.
 
 ---
 
+## 2026-11-15 — Combining rule: lean toward the writer when the signals disagree
+
+`scoring.py::combine_signals`:
+- If `model_score` and `style_score` are within **0.3** of each other (`DISAGREEMENT_GAP`),
+  the combined score is their average (weights **0.5 / 0.5**).
+- If they are more than 0.3 apart, the combined score is the **lower** of the two.
+
+Each log entry records `signals_disagree` so unit 8 can see which branch ran.
+
+Through `/submit`:
+
+| Input | model | style | combined | branch |
+|---|---|---|---|---|
+| clearly AI | 0.926 | 0.913 | 0.919 | average |
+| clearly human (mine) | 0.188 | 0.643 | 0.188 | lower |
+| plain human (mine) | 0.135 | 0.270 | 0.202 | average |
+| lightly-edited AI | 0.688 | 0.397 | 0.543 | average |
+
+**Why:** a wrong "AI" label on a real writer is the expensive mistake, so a big
+disagreement goes the writer's way. I picked averaging-when-close (version B) over
+always-take-the-lower (version A) so that lightly-edited AI lands near the middle (0.54)
+instead of passing as human (0.40).
+
+**Known weakness:** the edited AI's gap was 0.29, just under the line. A slightly heavier
+edit pushes the gap past 0.3, the rule takes the lower score, and it scores about 0.40.
+
+---
+
 ## 2026-11-15 — Style signal: what it measures and how it's weighted
 
 `stylometry.py::style_signal` maps three measures onto 0–1 (1 = AI-like) with a clipped

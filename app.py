@@ -31,6 +31,8 @@ from flask import Flask, jsonify, request
 import audit
 import config
 import detector
+import scoring
+import stylometry
 
 app = Flask(__name__)
 
@@ -232,9 +234,11 @@ def submit():
         return _reject(who, "detector_unavailable", 503,
                        "The detector model isn't loaded. Run `python detector.py` once.")
 
-    # Placeholders until the style signal (4a), combining rule (4b) and labels (5a).
-    style_score = None
-    confidence = None
+    style_score = stylometry.style_signal(text)
+    confidence = scoring.combine_signals(model_score, style_score)
+    disagree = scoring.signals_disagree(model_score, style_score)
+
+    # Placeholders until the labels (5a).
     guess = None
     label = "PLACEHOLDER — label not written yet."
 
@@ -249,6 +253,7 @@ def submit():
         label=label,
         status="decided",
         word_count=len(text.split()),
+        signals_disagree=disagree,
     )
 
     return jsonify({
