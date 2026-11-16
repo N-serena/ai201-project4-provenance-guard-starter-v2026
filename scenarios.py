@@ -22,32 +22,35 @@ A scenario carries **either** of these:
               because you cannot express "the field is missing" as a string.
 """
 
+# Under 50 words each. My own messages from the unit 7 build chat, typed as I
+# sent them. Used for criterion 1 and as the submissions criterion 2 appeals.
+MY_SHORT_PIECES = [
+    "I would for patterns, because AI writing has a pattern, I would design "
+    "a service that detects this to flag whether it was AI or not, or simple "
+    "maybe let the user tell if its content is ai generated",
+    "it feels generic, less personal, formula-like ...",
+    "i don't really know someone personally, but it's true a learner might "
+    "depict these signals",
+    "it should be gentle, point out the signals or the reason why, and let "
+    "them appeal",
+    "depends also on the person, i am not a poet, so under 50 words is short. "
+    "maybe for a poet who is used to long reading might differ",
+    "because a real writer shouldn't feel accused, they can appeal, and not "
+    "all AI writings have patterns, with good prompting and correction we can "
+    "get an AI content that is signal free",
+    "because for a non-assisted real writer, it is improbable to submit that "
+    "amt, except if prepared in advance",
+    "per creator, because a writer should have their own limit",
+    "depending on the poem length ~2-3 for short and ~1 for longer ones",
+    "Because i don't think the human intervention will be meaningful",
+]
+
 SCENARIOS = [
     {
         "name": "short pieces of mine",
         "criterion": 1,
-        # Under 50 words each. My own messages from the unit 7 build chat, typed
-        # as I sent them. Target: at most 3 of 10 get guess "ai", in every trial.
-        "texts": [
-            "I would for patterns, because AI writing has a pattern, I would design "
-            "a service that detects this to flag whether it was AI or not, or simple "
-            "maybe let the user tell if its content is ai generated",
-            "it feels generic, less personal, formula-like ...",
-            "i don't really know someone personally, but it's true a learner might "
-            "depict these signals",
-            "it should be gentle, point out the signals or the reason why, and let "
-            "them appeal",
-            "depends also on the person, i am not a poet, so under 50 words is short. "
-            "maybe for a poet who is used to long reading might differ",
-            "because a real writer shouldn't feel accused, they can appeal, and not "
-            "all AI writings have patterns, with good prompting and correction we can "
-            "get an AI content that is signal free",
-            "because for a non-assisted real writer, it is improbable to submit that "
-            "amt, except if prepared in advance",
-            "per creator, because a writer should have their own limit",
-            "depending on the poem length ~2-3 for short and ~1 for longer ones",
-            "Because i don't think the human intervention will be meaningful",
-        ],
+        # Target: at most 3 of 10 get guess "ai", in every trial.
+        "texts": MY_SHORT_PIECES,
     },
     {
         "name": "long pieces of mine",
@@ -240,27 +243,32 @@ SCENARIOS = [
             "cuisine, particularly during less busy hours.",
         ],
     },
-    # Still to add: bad input (criterion 3) and appeals (criterion 2).
-    # A bad-input criterion looks like this. Uncomment and adjust if that's one
-    # of your five — these are raw request bodies, sent exactly as written.
-    #
-    # {
-    #     "name": "bad input",
-    #     "criterion": 3,
-    #     "bodies": [
-    #         {"text": "", "creator_id": "eval_bad_empty"},
-    #         {"creator_id": "eval_bad_missing"},          # no text field at all
-    #         {"text": "word " * 50000, "creator_id": "eval_bad_huge"},
-    #         {"text": None, "creator_id": "eval_bad_null"},
-    #     ],
-    # },
-
-    # TODO: add what your remaining criteria need.
-    #
-    # A criterion about the appeal path can't be tested by sending text alone;
-    # it needs a submission first and then an appeal against the content_id
-    # that came back. You'll need to test that one by hand, or extend this file
-    # and run_eval.py to do it. Saying which you did is part of the write-up.
+    {
+        "name": "appeals",
+        "criterion": 2,
+        # Each piece is submitted, then appealed with the content_id that came
+        # back. Target: all 10 return under_review and all 10 are in /log, in
+        # every trial. run_eval.py reports these under "Checks".
+        "texts": MY_SHORT_PIECES,
+        "appeal_reasoning": "I wrote this myself, in my own words.",
+    },
+    {
+        "name": "bad input",
+        "criterion": 3,
+        # The 7 kinds of broken request from criteria.md, in that order. Target:
+        # 7 of 7 get a 4xx with error and message, 7 rejected entries reach
+        # /log, and /ping answers afterwards, in every trial.
+        "check_rejections": True,
+        "bodies": [
+            '{"text": "this body is not valid JSON',
+            {"text": "Some writing with no creator attached to it."},
+            {"creator_id": "eval_bad_no_text"},
+            {"text": 12345, "creator_id": "eval_bad_not_string"},
+            {"text": "   ", "creator_id": "eval_bad_blank"},
+            {"text": "word " * 5000, "creator_id": "eval_bad_too_long"},
+            {"text": "Hi.", "creator_id": "eval_bad_too_short"},
+        ],
+    },
 ]
 
 
@@ -289,10 +297,11 @@ def validate() -> list[str]:
 
         if bodies:
             for j, body in enumerate(bodies, 1):
-                if not isinstance(body, dict):
+                if not isinstance(body, (dict, str)):
                     problems.append(
-                        f"scenario {i}, body {j} is not a dict — bodies are whole "
-                        f"request bodies, like {{'text': '', 'creator_id': 'x'}}"
+                        f"scenario {i}, body {j} is not a dict or str — bodies are "
+                        f"whole request bodies, like {{'text': '', 'creator_id': 'x'}}, "
+                        f"or a str sent as raw bytes"
                     )
             continue
 

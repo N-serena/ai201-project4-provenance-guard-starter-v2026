@@ -4,6 +4,23 @@ Newest first. Each entry: the decision, the date, and why.
 
 ---
 
+## 2026-11-16 — Criteria 2 and 3 are tested by an extended `run_eval.py`
+
+`scenarios.py` gained two keys and `run_eval.py` reads them:
+- `appeal_reasoning`: after each successful submit, appeal its `content_id` and check
+  `/log` for the appeal entry.
+- `check_rejections`: after each trial, count 4xx responses, responses carrying
+  `error` and `message`, rejected entries the trial added to `/log`, and the `/ping`
+  status.
+
+A `bodies` entry that is a str is sent as raw bytes, for criterion 3's "body isn't JSON".
+
+**Why:** criterion 2 and 3 have to hold in all three trials, and checking 30 appeals and
+21 bad requests by hand is slow and easy to get wrong. The checks land in the same report
+as the other criteria.
+
+---
+
 ## 2026-11-15 — Rate limits: 10 per minute, 200 per day, per creator
 
 Rate limiting is on by default (`config.RATE_LIMITING_ENABLED`; `AI201_RATE_LIMITS=0`

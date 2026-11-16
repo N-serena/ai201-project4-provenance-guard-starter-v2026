@@ -66,7 +66,7 @@ false_positive 8, prompt_injection 6, malformed 8) and 24 in
 |---|---|---|---|
 | 1 | Rate limiting: numbers, enable, `--flood 15` → 429s in README | me (numbers, why), Claude (wiring) | done — see DECISIONS |
 | 2 | Attack run before: `run_attacks.py --set attack_set --label before`, HELD/BROKE per row | script sends, I judge | done — 34 HELD / 22 BROKE, 0 crashes; worst: EV09 |
-| 3 | Own criteria, three trials: fill `scenarios.py`, `run_eval.py --label before` | Claude + my writing | in progress — `scenarios.py` has criteria 1, 4, 5; criteria 2 (appeals) and 3 (bad input incl. non-JSON body) need `run_eval.py` extended |
+| 3 | Own criteria, three trials: fill `scenarios.py`, `run_eval.py --label before` | Claude + my writing | done — `results/run_2026-11-16_1117_before.md`; only criterion 1 (long) missed: 3 of 10 called ai, every trial |
 | 4 | Verdicts and diagnoses: stage + mechanism for each miss | me (Claude checks) | pending |
 | 5 | One improvement, `--label after` | both | pending |
 | 6 | What's Still Broken + production trade | me | pending |
@@ -76,6 +76,12 @@ From the before run (for step 4's diagnoses):
   human, the gap was over 0.3, and the combining rule took the lower score.
 - FP02–FP05 were called ai with both signals agreeing (0.74–0.94).
 - MF03–MF07 got a label: nothing checks that the text is English words before scoring.
+
+From the eval run (before):
+- Scores were identical in all three trials: gpt2 on CPU gives the same number each time.
+- The model signal put all 10 of my long pieces between 0.67 and 0.80. Style pulled 7 of
+  them down; the 3 called ai (long 2, 9, 10) had style 0.54–0.60, inside the 0.3 gap, so
+  the average ran and landed just over 0.65 (0.655–0.676).
 
 First things to watch, from unit 7:
 - Short or unpunctuated text leans AI on the style signal (criterion 1's short pieces).
