@@ -237,10 +237,7 @@ def submit():
     style_score = stylometry.style_signal(text)
     confidence = scoring.combine_signals(model_score, style_score)
     disagree = scoring.signals_disagree(model_score, style_score)
-
-    # Placeholders until the labels (5a).
-    guess = None
-    label = "PLACEHOLDER — label not written yet."
+    guess, label = scoring.score_to_label(confidence)
 
     content_id = str(uuid.uuid4())
     audit.log_decision(

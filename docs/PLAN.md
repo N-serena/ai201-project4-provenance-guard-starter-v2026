@@ -19,8 +19,8 @@ before step 3b).
 | 3b | M3 — signal one wired in, `content_id`, audit log entry, `text_too_short` 400 | Claude | done |
 | 4a | M4 — `stylometry.py` measures + `style_signal`, four calibration inputs | Claude | done — see DECISIONS |
 | 4b | M4 — combining rule (I write it in words; Claude codes it), both scores logged | both | done — see DECISIONS |
-| 5a | M5 — three label texts (me), `score_to_label` + thresholds (Claude) | both | next |
-| 5b | M5 — `/appeal` | Claude | pending |
+| 5a | M5 — three label texts (me), `score_to_label` + thresholds (Claude) | both | done — see DECISIONS |
+| 5b | M5 — `/appeal` | Claude | next |
 | 6 | M6 — README write-up, checklist, submit fork URL | me (Claude checks claims vs code) | pending |
 | — | Stretch: `GET /content/<id>` (decide after 5b; declare in README first) | — | undecided |
 

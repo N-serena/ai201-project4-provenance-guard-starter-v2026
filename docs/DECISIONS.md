@@ -4,6 +4,25 @@ Newest first. Each entry: the decision, the date, and why.
 
 ---
 
+## 2026-11-15 — Labels and thresholds
+
+| Label | Score range | Text |
+|---|---|---|
+| high-confidence human | 0.00 up to (not including) 0.35 | We think this was written by a human. |
+| unsure | 0.35 up to (not including) 0.65 | We're not sure who wrote this, you can appeal. |
+| high-confidence AI | 0.65 – 1.00 | We think this might be AI, you can appeal. |
+
+The text lives in `scoring.py` (`LABEL_HUMAN`, `LABEL_UNSURE`, `LABEL_AI`); thresholds in
+`config.py`. A sweep of 0.0000–1.0000 found no gaps. Through `/submit` all three are
+reached: my writing → human (0.19, 0.20), edited AI → unsure (0.54), chatbot → AI (0.92).
+
+**Why:** the labels are my own words. I read them back as the writer would (the unsure and
+AI labels don't say why, and both end in "you can appeal", so they sound alike) and chose
+to keep them as written. Thresholds stay at the starter 0.35 / 0.65: on my four inputs they
+put every text where I'd expect it.
+
+---
+
 ## 2026-11-15 — Combining rule: lean toward the writer when the signals disagree
 
 `scoring.py::combine_signals`:
