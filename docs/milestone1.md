@@ -94,6 +94,7 @@ Errors: each returns `{"error": code, "message": text}` and is logged as a rejec
 | `text` blank | 400 | `empty_text` |
 | `text` over 20 000 characters | 413 | `text_too_long` |
 | `text` too short for the detector to score | 400 | `text_too_short` (added in step 3b) |
+| `text` isn't English writing (control characters, under 60% Latin letters, or a word over 45 letters) | 400 | `not_writing` (added in unit 8, step 5) |
 
 ### POST /appeal
 

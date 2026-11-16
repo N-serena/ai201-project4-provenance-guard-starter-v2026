@@ -632,20 +632,58 @@ Where it should have stopped: the route, which should check the text is real wor
 
 ## The Improvement
 
-**What I changed:**
+**What I changed:** the route now checks that `text` is English writing before either
+signal scores it (`app.py::_writing_problem`, called from `submit`). Text that fails gets a
+400 `not_writing`, and the log entry records which check it failed:
 
-**Which diagnosis pointed at it:**
+| Check | Refuses | Setting |
+|---|---|---|
+| `control_characters` | any control character except newline, carriage return and tab | — |
+| `too_few_english_letters` | under 60% of non-space characters are Latin letters | `config.MIN_LETTER_SHARE = 0.6` |
+| `word_too_long` | a run of more than 45 letters | `config.MAX_WORD_LETTERS = 45` |
+
+Before choosing 0.6, I ran the check on every input I had. My own 20 pieces and the 9-text
+set sat at 0.86 or above, and so did every real-text attack (lowest: PI05 at 0.88). MF04,
+MF06 and MF07 sat at 0.00.
+
+**Which diagnosis pointed at it:** pattern E. The route should check the text is real
+words.
 
 ### Attack Run — After
 
 <!-- Same format. `run_attacks.py --label after` -->
 
+Full run: `results/attack_run_2026-11-16_1213_after.md` (56 attacks, 0 crashes). I
+compared every row with the before run: exactly five changed, and the other 51 came back
+with the same status, guess and score.
 
+| ID | Targeting | Before | After | Verdict before → after |
+|---|---|---|---|---|
+| MF03 | control characters | 200 human 0.000 | 400 `not_writing` (`control_characters`) | BROKE → HELD |
+| MF04 | only punctuation | 200 human 0.011 | 400 `not_writing` (`too_few_english_letters`) | BROKE → HELD |
+| MF05 | one 4,000-character word | 200 ai 0.849 | 400 `not_writing` (`word_too_long`) | BROKE → HELD |
+| MF06 | emoji only | 200 ai 0.848 | 400 `not_writing` (`too_few_english_letters`) | BROKE → HELD |
+| MF07 | an Arabic sentence | 200 ai 0.803 | 400 `not_writing` (`too_few_english_letters`) | BROKE → HELD |
 
-**Did it help, and how do I know:**
+**Totals:** HELD 39 · BROKE 17 (before: 34 · 22). Malformed is now 20 of 20 HELD.
 
-<!-- Widening the unsure band usually fixes one problem and creates another.
-     Reporting that trade honestly is worth full credit. -->
+Two of the new log entries:
+
+```json
+{"check": "control_characters", "creator_id": "attacker_MF03", "event": "rejected", "reason": "not_writing", "status": "rejected", "timestamp": "2026-11-16T17:13:05+00:00"}
+{"check": "too_few_english_letters", "creator_id": "attacker_MF07", "event": "rejected", "reason": "not_writing", "status": "rejected", "timestamp": "2026-11-16T17:13:05+00:00"}
+```
+
+**Did it help, and how do I know:** yes, for pattern E. All five inputs that got a label
+before are now refused with a reason, and nothing else in the attack run moved. My five
+criteria came out the same as before (`results/run_2026-11-16_1213_after.md`): 2–5 still
+MET, criterion 1 still MISSED on long pieces (3 of 10 called ai). None of my own writing
+was refused.
+
+The cost: a writer who writes in Arabic, or any other non-Latin script, used to get a
+wrong "AI" label and now gets "Only English writing can be checked." That is better than
+a false accusation, but those writers are still not served. This change does nothing for
+patterns A–D, so 17 attacks still break and criterion 1 is still missed.
 
 
 

@@ -4,6 +4,25 @@ Newest first. Each entry: the decision, the date, and why.
 
 ---
 
+## 2026-11-16 — Improvement: the route refuses text that isn't English writing
+
+`app.py::_writing_problem` runs after the length check and before either signal. It
+returns 400 `not_writing` for control characters, under 60% Latin letters
+(`MIN_LETTER_SHARE`), or a run of more than 45 letters (`MAX_WORD_LETTERS`). The log
+entry carries `check` with the failed check.
+
+After run: MF03–MF07 went from BROKE to HELD (34 → 39 HELD); the other 51 attacks and all
+five criteria came back unchanged.
+
+**Why:** my diagnosis E, "the route should check the text is real words". I picked it
+over raising the AI line to 0.70 (which would have fixed criterion 1) because it costs my
+writers nothing, and pattern D had already shown the unsure band is too wide.
+
+**Known cost:** writing in a non-Latin script is refused with "Only English writing can
+be checked."
+
+---
+
 ## 2026-11-16 — Criteria 2 and 3 are tested by an extended `run_eval.py`
 
 `scenarios.py` gained two keys and `run_eval.py` reads them:

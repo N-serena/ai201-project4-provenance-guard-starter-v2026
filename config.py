@@ -55,6 +55,17 @@ DETECTOR_MAX_TOKENS = 400
 
 MAX_TEXT_CHARS = 20_000
 
+# Checks that `text` is English writing before either signal scores it.
+# Both signals score any characters at all, so emoji, other scripts, a run of one
+# letter or control characters would otherwise get a label (unit 8, pattern E).
+#
+# Share of non-space characters that must be Latin letters. My own writing and
+# every real-text attack sat at 0.86 or above; the inputs it is for sat at 0.47 or below.
+MIN_LETTER_SHARE = 0.6
+# Longest run of letters accepted as one word. The longest English dictionary word
+# has 45 letters.
+MAX_WORD_LETTERS = 45
+
 
 # ─── Scoring (Milestone 4) ───────────────────────────────────────────────────
 # How much each signal counts toward the combined score.

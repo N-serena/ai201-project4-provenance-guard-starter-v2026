@@ -24,6 +24,8 @@ Routes:
     GET  /health      is the service up, and is the model loaded
 """
 
+import re
+import unicodedata
 import uuid
 
 from flask import Flask, jsonify, request
@@ -225,6 +227,11 @@ def submit():
                        f"'text' is {len(text)} characters; the limit is "
                        f"{config.MAX_TEXT_CHARS}.", length=len(text))
 
+    problem = _writing_problem(text)
+    if problem:
+        return _reject(who, "not_writing", 400, NOT_WRITING_MESSAGES[problem],
+                       check=problem)
+
     try:
         model_score = detector.model_signal(text)
     except ValueError:
@@ -263,6 +270,33 @@ def submit():
         "style_score": style_score,
         "status": "decided",
     })
+
+
+NOT_WRITING_MESSAGES = {
+    "control_characters": "'text' contains control characters. Send plain writing.",
+    "too_few_english_letters": "'text' is mostly not English letters. "
+                               "Only English writing can be checked.",
+    "word_too_long": f"'text' has a word longer than {config.MAX_WORD_LETTERS} letters. "
+                     "Send writing in ordinary words.",
+}
+
+
+def _writing_problem(text: str) -> str | None:
+    """
+    Which check `text` fails as English writing, or None when it passes.
+
+    Runs before either signal, because both score any characters at all.
+    """
+    if any(unicodedata.category(c) == "Cc" and c not in "\n\r\t" for c in text):
+        return "control_characters"
+    visible = [c for c in text if not c.isspace()]
+    # Latin letters, accented ones included, end before U+0250.
+    latin = sum(c.isalpha() and ord(c) < 0x250 for c in visible)
+    if latin < config.MIN_LETTER_SHARE * len(visible):
+        return "too_few_english_letters"
+    if re.search(r"[^\W\d_]{%d,}" % (config.MAX_WORD_LETTERS + 1), text):
+        return "word_too_long"
+    return None
 
 
 def _reject(creator_id: str, reason: str, status: int, message: str, **extra):
