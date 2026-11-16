@@ -39,6 +39,27 @@
 <!-- The path a submission takes, from arriving to the label a reader sees.
      Six or seven steps — this is the trace you wrote in Milestone 1. -->
 
+A writing site sends a piece of text to Provenance Guard, and gets back a guess about
+whether a person or an AI wrote it, a score saying how sure that guess is, and a sentence
+the writer can read. If the writer thinks it's wrong, they can appeal.
+
+The path a submission takes (full trace in [docs/milestone1.md](docs/milestone1.md)):
+
+1. **The request arrives** at `POST /submit` with `text` and `creator_id`.
+2. **Input checks** (`app.py::submit`) make sure there is usable text to judge. Anything
+   broken gets a 4xx error that says what to fix, and is logged as a rejection.
+3. **Signal one** (`detector.py::model_signal`) looks at the *words*: how predictable they
+   are to a language model. It gives a number from 0 to 1.
+4. **Signal two** (`stylometry.py::style_signal`) looks at the *shape*: sentence lengths and
+   punctuation. It gives another number from 0 to 1.
+5. **Combining** (`scoring.py::combine_signals`) turns the two numbers into one score,
+   leaning toward the writer when the signals disagree.
+6. **The label** (`scoring.py::score_to_label`) turns that score into one of three sentences
+   a person can read.
+7. **The log** (`audit.py::log_decision`) records the decision with both signal scores, and
+   the response goes back to the writer with a `content_id`. With that id, the writer can
+   send `POST /appeal`, which records their reasoning and moves the piece to `under_review`.
+
 
 
 ---
@@ -53,35 +74,71 @@
 
 ### Signal one — the model signal
 
-**What it measures:**
+**What it measures:** how predictable the words are to a language model (gpt2, run
+locally). The model reads the text and measures its *perplexity*, which is how surprised it
+is by each next word. Low surprise becomes a high AI score. I left the starter's mapping
+as it was: perplexity 45 scores 0.5 (`detector.py::model_signal`, midpoint 45, steepness 1.6).
+It reads only the first 400 tokens, about 300 words.
 
-**Why that might differ between human and AI writing:**
+**Why that might differ between human and AI writing:** AI writing feels *generic*. A
+model writes by picking a likely next word, so its text is easy for a model to predict.
+People wander more and pick odd, specific words.
 
-**What it can't see:**
+**What it can't see:** whether the writing is *personal*. It counts how expected the
+words are and never understands what they say. A learner, or someone writing in a second
+language, keeps to words they're sure of. That reads as predictable, so this signal is
+most likely to accuse the writer with the least ability to argue back.
 
 ### Signal two — the style signal
 
-**What it measures:**
+**What it measures:** the *shape* of the text (`stylometry.py::style_signal`):
+- **Sentence-length spread:** how much sentence lengths vary (stdev / mean). Weight 0.6.
+- **Expressive punctuation:** `; : ! ? ( ) ' " …` per word. Full stops, commas and em
+  dashes are left out. Weight 0.4.
+- **Word variety:** a moving-average type-token ratio. It's computed and logged, but has
+  weight **0**, because on my calibration inputs the chatbot text had *more* varied
+  vocabulary than mine, so it pointed the wrong way.
 
-**Why that might differ between human and AI writing:**
+Each measure is mapped onto 0–1 (1 = AI-like) and the weighted average is the score. A
+text with only one sentence has no spread, so that part counts as 0.5. Ranges and
+calibration results are in [docs/DECISIONS.md](docs/DECISIONS.md).
 
-**What it can't see:**
+**Why that might differ between human and AI writing:** AI writing feels *formula-like*.
+That shows up as sentences that are all about the same length and tidy, unexpressive
+punctuation. Human writing is lumpier.
+
+**What it can't see:** it can't read at all. Anything that changes the shape without
+changing the meaning moves it: breaking up sentences, adding contractions, adding typos.
+It also reads very short or unpunctuated text as AI-like. My own lowercase chat style has
+no expressive punctuation, and scored 0.64 on it.
 
 ### The combining rule
 
-<!-- Write the rule in words, then give the numbers. What happens when the two
-     signals disagree? -->
+**The rule:** lean toward the writer when the signals disagree. If the two scores are
+close, average them. If they're far apart, take the lower (more human) one, so the system
+only leans AI when both signals point that way.
 
-**The rule:**
-
-**The numbers:**
+**The numbers:** close means within **0.3** of each other (`config.DISAGREEMENT_GAP`).
+The average weights each signal **0.5** (`config.WEIGHT_MODEL_SIGNAL`,
+`config.WEIGHT_STYLE_SIGNAL`). Labels: below **0.35** is human, **0.35** up to
+**0.65** is unsure, **0.65** and above is AI (`config.HUMAN_THRESHOLD`,
+`config.AI_THRESHOLD`).
 
 **Where it lives:** `scoring.py::combine_signals`
 
 <!-- ⚠️ The grader checks your code against that line. If your rule lives
      somewhere else, say where. -->
 
-**A case where my two signals split, and what my rule does with it:**
+**A case where my two signals split, and what my rule does with it:** a message I wrote
+myself, in lowercase with only commas and full stops. Signal one said human (**0.19**);
+signal two said AI-ish (**0.64**), because there was no expressive punctuation. They're
+0.45 apart, so the rule takes the lower score. Combined **0.19**: "We think this was written
+by a human." Plain averaging would have given 0.42, which is "unsure", on something I wrote.
+
+The opposite split nearly happened on lightly-edited AI text: model 0.69, style 0.40, a
+gap of 0.29. That's just under the line, so the rule averaged them to 0.54, "unsure". A
+slightly heavier edit would push the gap past 0.3, and the rule would let it through at
+about 0.40.
 
 
 
@@ -96,14 +153,24 @@
 
 | Label | Score range | The exact text a reader sees |
 |---|---|---|
-| high-confidence human |  |  |
-| unsure |  |  |
-| high-confidence AI |  |  |
+| high-confidence human | 0.00 up to (not including) 0.35 | We think this was written by a human. |
+| unsure | 0.35 up to (not including) 0.65 | We're not sure who wrote this, you can appeal. |
+| high-confidence AI | 0.65 – 1.00 | We think this might be AI, you can appeal. |
+
+Every score from 0 to 1 maps to exactly one label (checked with a sweep of 0.0000–1.0000).
+All three were reached by real text through `/submit`: my own writing → human (0.19,
+0.20), lightly-edited AI → unsure (0.54), a chatbot paragraph → AI (0.92). The text lives in
+`scoring.py` as `LABEL_HUMAN`, `LABEL_UNSURE` and `LABEL_AI`.
 
 **Why I worded the "unsure" one this way:**
 <!-- It's the hardest of the three. It has to admit uncertainty without
      sounding like an accusation, because the person reading it may well have
      written every word themselves. -->
+
+Because a real writer shouldn't feel accused, and they can appeal. Not all AI writing has
+patterns: with good prompting and correction, someone can get AI content that is signal
+free. So the system can't be sure either way, and the label says so honestly and points
+straight to the appeal.
 
 
 
@@ -199,17 +266,32 @@ reasoning returns `400 empty_reasoning`.
 
 ## How I Used AI
 
-**Moment 1**
+I used Claude (Claude Code) through the whole build. It asked me questions one at a time
+for the parts that had to be mine (the trace, the criteria, the combining rule, the
+labels), wrote the code around my answers, and ran the curl tests.
 
-- *What I asked for:*
-- *What came back:*
-- *What I changed:*
+**Moment 1: the false-positive number in criterion 1**
 
-**Moment 2**
+- *What I asked for:* help writing my criteria. I'd chosen "at most 2 of 10 short pieces
+  labelled AI", and said I picked 2 "to leave room for the three runs".
+- *What came back:* my reasoning was backwards. A lower number is *stricter*, so it leaves
+  less room. If any one of the three runs produced a third wrong label, the criterion
+  would fail. Both 2 and 3 were defensible; the choice was mine.
+- *What I changed:* I raised it to 3, because short pieces give the signals very little to
+  go on and the model can score the same text differently between runs. The reason under
+  criterion 1 now says that.
 
-- *What I asked for:*
-- *What came back:*
-- *What I changed:*
+**Moment 2: word variety pointed the wrong way**
+
+- *What I asked for:* build the style signal from the three measures in the brief:
+  sentence-length spread, word variety, punctuation.
+- *What came back:* before scaling anything, Claude printed the raw measures on my four
+  calibration inputs. Word variety had the chatbot text at 0.88 and my own writing at 0.77,
+  so the AI text had *more* varied vocabulary. That's the opposite of what the brief
+  expected.
+- *What I changed:* word variety stays in the code and is still computed, but it counts
+  for nothing (weight 0). Spread and punctuation carry the signal. I wrote the finding in
+  Signals and Scoring instead of leaving a measure in that quietly made the score worse.
 
 <!-- ═══════════════════════ UNIT 8 — THE TEST ═══════════════════════ -->
 

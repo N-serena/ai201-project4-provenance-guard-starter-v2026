@@ -21,7 +21,7 @@ before step 3b).
 | 4b | M4 — combining rule (I write it in words; Claude codes it), both scores logged | both | done — see DECISIONS |
 | 5a | M5 — three label texts (me), `score_to_label` + thresholds (Claude) | both | done — see DECISIONS |
 | 5b | M5 — `/appeal` | Claude | done — README Sample Run filled |
-| 6 | M6 — README write-up, checklist, submit fork URL | me (Claude checks claims vs code) | next |
+| 6 | M6 — README write-up, checklist, submit fork URL | me (Claude checks claims vs code) | done — commit, push, submit URL |
 | — | Stretch: `GET /content/<id>` (decide after 5b; declare in README first) | — | undecided |
 
 ## Session notes
@@ -58,4 +58,8 @@ before step 3b).
 
 ## Unit 8
 
-Not started. See RUNNING.md, "Unit 8 — the test".
+Not started. First things to watch, from unit 7:
+- Short or unpunctuated text leans AI on the style signal (criterion 1's short pieces).
+- Lightly-edited AI sat 0.01 under the disagreement gap; a heavier edit slips it to ~0.40.
+- Criterion 1 needs 20 pieces of my own writing and criterion 4/5 a 9-text set, all in
+  `scenarios.py`. See RUNNING.md, "Unit 8 — the test".
