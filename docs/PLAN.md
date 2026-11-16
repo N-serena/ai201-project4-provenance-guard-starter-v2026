@@ -66,7 +66,7 @@ false_positive 8, prompt_injection 6, malformed 8) and 24 in
 |---|---|---|---|
 | 1 | Rate limiting: numbers, enable, `--flood 15` → 429s in README | me (numbers, why), Claude (wiring) | done — see DECISIONS |
 | 2 | Attack run before: `run_attacks.py --set attack_set --label before`, HELD/BROKE per row | script sends, I judge | done — 34 HELD / 22 BROKE, 0 crashes; worst: EV09 |
-| 3 | Own criteria, three trials: fill `scenarios.py`, `run_eval.py --label before` | Claude + my writing | pending — needs 20 + 3 pieces of my own writing |
+| 3 | Own criteria, three trials: fill `scenarios.py`, `run_eval.py --label before` | Claude + my writing | in progress — `scenarios.py` has criteria 1, 4, 5; criteria 2 (appeals) and 3 (bad input incl. non-JSON body) need `run_eval.py` extended |
 | 4 | Verdicts and diagnoses: stage + mechanism for each miss | me (Claude checks) | pending |
 | 5 | One improvement, `--label after` | both | pending |
 | 6 | What's Still Broken + production trade | me | pending |
