@@ -65,11 +65,17 @@ false_positive 8, prompt_injection 6, malformed 8) and 24 in
 | # | Step | Owner | Status |
 |---|---|---|---|
 | 1 | Rate limiting: numbers, enable, `--flood 15` → 429s in README | me (numbers, why), Claude (wiring) | done — see DECISIONS |
-| 2 | Attack run before: `run_attacks.py --set attack_set --label before`, HELD/BROKE per row | script sends, I judge | pending |
+| 2 | Attack run before: `run_attacks.py --set attack_set --label before`, HELD/BROKE per row | script sends, I judge | done — 34 HELD / 22 BROKE, 0 crashes; worst: EV09 |
 | 3 | Own criteria, three trials: fill `scenarios.py`, `run_eval.py --label before` | Claude + my writing | pending — needs 20 + 3 pieces of my own writing |
 | 4 | Verdicts and diagnoses: stage + mechanism for each miss | me (Claude checks) | pending |
 | 5 | One improvement, `--label after` | both | pending |
 | 6 | What's Still Broken + production trade | me | pending |
+
+From the before run (for step 4's diagnoses):
+- EV03, EV09 and PI05 passed as human the same way: model said AI (0.64–0.70), style said
+  human, the gap was over 0.3, and the combining rule took the lower score.
+- FP02–FP05 were called ai with both signals agreeing (0.74–0.94).
+- MF03–MF07 got a label: nothing checks that the text is English words before scoring.
 
 First things to watch, from unit 7:
 - Short or unpunctuated text leans AI on the style signal (criterion 1's short pieces).

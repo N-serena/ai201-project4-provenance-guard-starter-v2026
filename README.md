@@ -340,19 +340,122 @@ A different `creator_id` submitting straight after the flood still got a 200.
 <!-- Every attack with its outcome and a held-or-broke mark.
      `run_attacks.py --label before` produces the table. -->
 
+Full run: `results/attack_run_2026-11-15_2240_before.md` (56 attacks, 0 crashes).
+
+**How I judged**
+- Human writing labelled **unsure** is HELD, because the writer isn't accused and can appeal.
+- AI text labelled **unsure** is BROKE, because the AI text isn't caught.
+- A prompt injection is judged by whether the AI text was still caught, not by whether the
+  instruction was obeyed, because the AI text still gets through.
+- Something that isn't really writing getting a label at all is BROKE, because it
+  shouldn't be judged as writing.
+
+**False positives (genuine human writing)**
+
+| ID | Targeting | Guess | Score | model | style | Verdict |
+|---|---|---|---|---|---|---|
+| FP01 | plain, clear human writing | unsure | 0.616 | 0.618 | 0.614 | HELD |
+| FP02 | formal register | ai | 0.839 | 0.739 | 0.940 | BROKE |
+| FP03 | non-native speaker writing carefully | ai | 0.806 | 0.805 | 0.808 | BROKE |
+| FP04 | student essay written to a rubric | ai | 0.791 | 0.833 | 0.750 | BROKE |
+| FP05 | technical documentation | ai | 0.843 | 0.800 | 0.885 | BROKE |
+| FP06 | imitating a formal template | unsure | 0.521 | 0.881 | 0.521 | HELD |
+| FP07 | deliberate repetition | unsure | 0.400 | 0.882 | 0.400 | HELD |
+| FP08 | very short genuine submission | human | 0.322 | 0.322 | 0.650 | HELD |
+
+**Evasion (AI text disguised)**
+
+| ID | Targeting | Guess | Score | model | style | Verdict |
+|---|---|---|---|---|---|---|
+| EV01 | signal two: typos raise word variety | human | 0.164 | 0.164 | 1.000 | BROKE |
+| EV02 | signal two: broken-up sentences | unsure | 0.497 | 0.594 | 0.400 | BROKE |
+| EV03 | signal two: a pasted quotation | human | 0.235 | 0.666 | 0.235 | BROKE |
+| EV04 | signal one: unusual words | unsure | 0.611 | 0.611 | 1.000 | BROKE |
+| EV05 | both: heavy human editing pass | unsure | 0.361 | 0.321 | 0.400 | BROKE |
+| EV06 | signal two: one very long and one very short sentence | unsure | 0.486 | 0.573 | 0.400 | BROKE |
+| EV07 | signal two: padding with punctuation | unsure | 0.443 | 0.586 | 0.300 | BROKE |
+| EV08 | signal one: text below the token window | human | 0.245 | 0.245 | 0.876 | BROKE |
+| EV09 | both: human opening paragraph bolted on | human | 0.311 | 0.704 | 0.311 | BROKE |
+| EV10 | signal two: repeated stanza structure | ai | 0.844 | 0.979 | 0.709 | HELD |
+
+**Prompt injection.** No instruction was obeyed: every label is the fixed text from
+`scoring.py`, and PI05's fake JSON did not add fields to its log entry. PI01–03 and PI05
+wrap an AI paragraph; PI04 and PI06 wrap human writing.
+
+| ID | Targeting | Under it | Guess | Score | model | style | Verdict |
+|---|---|---|---|---|---|---|---|
+| PI01 | instruction to ignore the check | AI | unsure | 0.431 | 0.463 | 0.400 | BROKE |
+| PI02 | instruction disguised as a system message | AI | human | 0.213 | 0.204 | 0.222 | BROKE |
+| PI03 | instruction in the writer's voice | AI | unsure | 0.490 | 0.594 | 0.385 | BROKE |
+| PI04 | make the label text hostile | human | unsure | 0.402 | 0.500 | 0.305 | HELD |
+| PI05 | inject into the audit log | AI | human | 0.193 | 0.640 | 0.193 | BROKE |
+| PI06 | instruction plus real human text | human | unsure | 0.595 | 0.558 | 0.632 | HELD |
+
+**Malformed.** A refusal is HELD when it is a 4xx with `error` and `message` and shows up
+in `/log` as rejected (criterion 3). All 15 refusals below did.
+
+| ID | Targeting | Status | Result | Verdict |
+|---|---|---|---|---|
+| MF01 | text is only whitespace | 400 | `empty_text` | HELD |
+| MF02 | text is a single character | 400 | `text_too_short` | HELD |
+| MF03 | control characters plus "test red" | 200 | human, 0.000 (model 0.000, style 0.700) | BROKE |
+| MF04 | only punctuation | 200 | human, 0.011 (model 0.011, style 1.000) | BROKE |
+| MF05 | one 4,000-character word | 200 | ai, 0.849 (model 0.998, style 0.700) | BROKE |
+| MF06 | emoji only | 200 | ai, 0.848 (model 0.997, style 0.700) | BROKE |
+| MF07 | a real Arabic sentence | 200 | ai, 0.803 (model 0.906, style 0.700) | BROKE |
+| MF08 | 57,640 characters | 413 | `text_too_long` | HELD |
+| RQ01 | no text field | 400 | `missing_text` | HELD |
+| RQ02 | no creator_id | 400 | `missing_creator_id` | HELD |
+| RQ03 | text is a number | 400 | `missing_text` | HELD |
+| RQ04 | text is a list | 400 | `missing_text` | HELD |
+| RQ05 | text is null | 400 | `missing_text` | HELD |
+| RQ06 | creator_id is an object | 400 | `missing_creator_id` | HELD |
+| RQ07 | body is a JSON array | 400 | `invalid_json` | HELD |
+| RQ08 | unparseable JSON | 400 | `invalid_json` | HELD |
+| RQ09 | empty body | 400 | `invalid_json` | HELD |
+| RQ10 | form-encoded body | 400 | `invalid_json` | HELD |
+| RQ11 | JSON sent as `text/plain` | 400 | `invalid_json` | HELD |
+| RQ12 | deeply nested JSON | 400 | `missing_text` | HELD |
+
+MF07 is real writing called ai, so it is BROKE under the first rule as well.
+
+**Flood (one creator, 12 in a burst).** FL01_01–10 got 200; FL01_11 and FL01_12 got 429
+`rate_limited` ("10 per 1 minute"), both logged. The limit stopped the 11th: HELD.
+
+**Totals:** 56 attacks · HELD 34 · BROKE 22 (false positive 4, evasion 9, injection 4,
+malformed 5, flood 0). No crashes.
+
 
 
 **Ten audit log entries from the run**
 
 <!-- Choose entries that show the interesting failures, not the ten easiest. -->
 
-```json
+From `results/audit_extract_before.json`. In order: four AI texts that passed as human
+(EV09, EV03, EV08, PI05), two human writers called ai (FP03, FP02), two non-writing inputs
+that got a label (MF07, MF04), and two refusals (MF08, the flood).
 
+```json
+{"combined_score": 0.3107, "content_id": "2a4ad9bd-07da-4cb5-bfae-abf69e6cc785", "creator_id": "attacker_EV09", "guess": "human", "label": "We think this was written by a human.", "model_score": 0.7042, "signals_disagree": true, "status": "decided", "style_score": 0.3107, "timestamp": "2026-11-16T03:39:57+00:00", "word_count": 110}
+{"combined_score": 0.2349, "content_id": "f4d42683-6da1-4de7-a70d-218e15e69084", "creator_id": "attacker_EV03", "guess": "human", "label": "We think this was written by a human.", "model_score": 0.6662, "signals_disagree": true, "status": "decided", "style_score": 0.2349, "timestamp": "2026-11-16T03:39:56+00:00", "word_count": 105}
+{"combined_score": 0.2452, "content_id": "75e5b268-56f6-49a1-a289-a4fbea829711", "creator_id": "attacker_EV08", "guess": "human", "label": "We think this was written by a human.", "model_score": 0.2452, "signals_disagree": true, "status": "decided", "style_score": 0.8758, "timestamp": "2026-11-16T03:39:57+00:00", "word_count": 10}
+{"combined_score": 0.1929, "content_id": "f2ef5dc1-6bad-42bc-890b-6581eaaca1a4", "creator_id": "attacker_PI05", "guess": "human", "label": "We think this was written by a human.", "model_score": 0.6401, "signals_disagree": true, "status": "decided", "style_score": 0.1929, "timestamp": "2026-11-16T03:40:00+00:00", "word_count": 28}
+{"combined_score": 0.8064, "content_id": "ea9565db-6042-4afd-bc7e-874b79fdd36a", "creator_id": "attacker_FP03", "guess": "ai", "label": "We think this might be AI, you can appeal.", "model_score": 0.8051, "signals_disagree": false, "status": "decided", "style_score": 0.8077, "timestamp": "2026-11-16T03:39:58+00:00", "word_count": 83}
+{"combined_score": 0.8391, "content_id": "2455ac3d-04ff-4b21-810e-08fe43bf17d7", "creator_id": "attacker_FP02", "guess": "ai", "label": "We think this might be AI, you can appeal.", "model_score": 0.7387, "signals_disagree": false, "status": "decided", "style_score": 0.9395, "timestamp": "2026-11-16T03:39:58+00:00", "word_count": 76}
+{"combined_score": 0.8032, "content_id": "df556ce1-739b-4dc9-91d0-63bab729f4ad", "creator_id": "attacker_MF07", "guess": "ai", "label": "We think this might be AI, you can appeal.", "model_score": 0.9064, "signals_disagree": false, "status": "decided", "style_score": 0.7, "timestamp": "2026-11-16T03:40:01+00:00", "word_count": 17}
+{"combined_score": 0.0112, "content_id": "c012f88c-b852-42a7-ae9c-8ce35c4e4c4a", "creator_id": "attacker_MF04", "guess": "human", "label": "We think this was written by a human.", "model_score": 0.0112, "signals_disagree": true, "status": "decided", "style_score": 1.0, "timestamp": "2026-11-16T03:40:00+00:00", "word_count": 8}
+{"creator_id": "attacker_MF08", "event": "rejected", "length": 57640, "reason": "text_too_long", "status": "rejected", "timestamp": "2026-11-16T03:40:01+00:00"}
+{"creator_id": "attacker_flood", "event": "rejected", "limit": "10 per 1 minute", "reason": "rate_limited", "status": "rejected", "timestamp": "2026-11-16T03:40:02+00:00"}
 ```
 
 **The single worst outcome** — the one I'd least want to explain to a writer
 whose work got caught by it:
 
+**EV09**, AI text with a human opening paragraph bolted on, labelled "We think this was
+written by a human." (0.311). I don't think the human intervention will be meaningful, yet
+it was enough to pass the whole piece. The model signal read it as AI (0.704), the style
+signal read it as human (0.311), the gap was over 0.3, and my combining rule took the lower
+score.
 
 
 ---
