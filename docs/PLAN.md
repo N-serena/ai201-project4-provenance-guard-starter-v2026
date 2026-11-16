@@ -69,7 +69,7 @@ false_positive 8, prompt_injection 6, malformed 8) and 24 in
 | 3 | Own criteria, three trials: fill `scenarios.py`, `run_eval.py --label before` | Claude + my writing | done — `results/run_2026-11-16_1117_before.md`; only criterion 1 (long) missed: 3 of 10 called ai, every trial |
 | 4 | Verdicts and diagnoses: stage + mechanism for each miss | me (Claude checks) | done — five patterns A–E in README "Diagnoses" |
 | 5 | One improvement, `--label after` | both | done — route word check; 39 HELD / 17 BROKE, criteria unchanged |
-| 6 | What's Still Broken + production trade | me | pending |
+| 6 | What's Still Broken + production trade | me | done — unit 8 checklist checked; push and resubmit the same URL |
 
 From the before run (for step 4's diagnoses):
 - EV03, EV09 and PI05 passed as human the same way: model said AI (0.64–0.70), style said

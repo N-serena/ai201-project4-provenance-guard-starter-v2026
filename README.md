@@ -694,12 +694,54 @@ patterns A–D, so 17 attacks still break and criterion 1 is still missed.
 <!-- For each attack still getting through and each criterion still missed:
      what you'd do, and why you stopped. -->
 
+After the improvement, 17 attacks still break and criterion 1 is still missed on long
+pieces. They fall into patterns A–D from the diagnoses.
+
+**A. Clean, predictable human writing called ai.** FP02, FP03, FP04, FP05, and criterion 1
+(3 of my 10 long pieces).
+
+- **What I'd do:** these get flagged because some kinds of writing are meant to be
+  clean, straight, concise and non-relational. So first establish what the piece is,
+  who it's for and what it's supposed to do, and judge it against what that kind of
+  writing normally looks like. We don't expect an executive email to be emotional and
+  full of grammar errors.
+- **Why I stopped:** to know what normal looks like for an email, an essay or tech docs,
+  I'd need many real samples of each kind, written by people and by AI, and I don't have
+  that data.
+
+**B. AI text passed as human through added quotes.** EV03, EV09, PI05.
+
+- **What I'd do:** score the quoted parts separately from the rest, so a quotation can't
+  pull the whole piece toward human.
+- **Why I stopped:** it needs more time to test.
+
+**C. The model signal read AI text as human.** EV01, EV05, EV08, PI02.
+
+- **What I'd do:** use a bigger model than gpt2 for signal one.
+- **Why I stopped:** it needs more compute and time. The model runs on my laptop's CPU
+  inside each request.
+
+**D. AI text landed in unsure.** EV02, EV04, EV06, EV07, PI01, PI03.
+
+- **What I'd do:** narrow the unsure band a little.
+- **Why I stopped:** it needs more testing. A narrower band also moves some of my own
+  writing toward the AI label (pattern A), so the new edge has to be checked against my
+  pieces first.
+
+**Also known:** the rate limit counts per `creator_id`, so a script that sends a new
+`creator_id` on every request gets a fresh limit each time. The flood attack used one
+creator, so the run did not test this.
+
 
 
 **The trade I'd make if this ran for real:**
 
 <!-- Two sentences. Fewer wrong accusations means more AI text getting through.
      Say which way you'd go and WHO PAYS FOR IT. -->
+
+I'd lean toward the writer, because a real writer shouldn't feel accused. The people who
+pay are honest writers, who end up competing with AI text that passes as human or sits in
+unsure.
 
 
 
