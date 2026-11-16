@@ -4,6 +4,25 @@ Newest first. Each entry: the decision, the date, and why.
 
 ---
 
+## 2026-11-15 — Rate limits: 10 per minute, 200 per day, per creator
+
+Rate limiting is on by default (`config.RATE_LIMITING_ENABLED`; `AI201_RATE_LIMITS=0`
+turns it off). `/submit` allows 10 a minute and 200 a day per `creator_id`, falling back
+to the caller's address when there is none (starter's `rate_limit_key`). Storage is
+in-memory, so a restart resets every count.
+
+`--flood 15` gave 10 × 200 then 5 × 429, each logged as `rate_limited`. A different
+creator straight after still got 200.
+
+**Why:** a real writer working without AI is unlikely to submit 10 pieces in a minute or
+200 in a day unless they prepared them in advance. Counting per creator gives each writer
+their own limit.
+
+**Known weakness:** a script can send a new `creator_id` on every request and get a fresh
+limit each time.
+
+---
+
 ## 2026-11-15 — Labels and thresholds
 
 | Label | Score range | Text |

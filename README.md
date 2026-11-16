@@ -299,25 +299,39 @@ labels), wrote the code around my answers, and ran the curl tests.
 
 ## Rate Limiting
 
-**My limits:** ___ per minute, ___ per day
+**My limits:** 10 per minute, 200 per day (`config.RATE_LIMIT_PER_MINUTE`,
+`config.RATE_LIMIT_PER_DAY`), on `POST /submit` only
 
-**Why those numbers and not others:**
-<!-- Think about two people: a real writer submitting their own work a few
-     times an hour, and a script sending a thousand variations to map your
-     thresholds. Your numbers have to be liveable for the first and hostile to
-     the second. -->
+**Why those numbers and not others:** a real writer working without AI is unlikely
+to submit 10 pieces in a minute or 200 in a day, unless they prepared them in advance.
 
-**What a caller counts as:** <!-- per address, or per creator_id? They fail
-differently — one script can look like a thousand callers, and one household
-can look like one. -->
+**What a caller counts as:** per `creator_id`, because a writer should have their own
+limit. A request with no `creator_id` counts against its address.
 
 **The run of status codes when I pushed past it:**
 
 <!-- python run_attacks.py --flood 15 -->
 
-```
+`python run_attacks.py --flood 15`: 15 submissions in a burst as `flood_tester`
+(`results/flood_2026-11-15_2008.md`):
 
 ```
+200 200 200 200 200 200 200 200 200 200 429 429 429 429 429
+```
+
+The 429 response:
+
+```json
+{"error":"rate_limited","limit":"10 per 1 minute","message":"Too many submissions. Try again shortly."}
+```
+
+Each 429 is also in the audit log as a rejection, so a flood leaves a trace:
+
+```json
+{"creator_id": "flood_tester", "event": "rejected", "status": "rejected", "reason": "rate_limited", "limit": "10 per 1 minute"}
+```
+
+A different `creator_id` submitting straight after the flood still got a 200.
 
 ---
 
