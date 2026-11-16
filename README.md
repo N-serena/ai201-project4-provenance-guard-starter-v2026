@@ -464,19 +464,68 @@ score.
 
 <!-- Your five criteria across three trials. `run_eval.py --label before`. -->
 
+Full run: `results/run_2026-11-16_1117_before.md`. Inputs are in `scenarios.py`.
+Criteria 2 and 3 are checked by `run_eval.py` itself (`appeal_reasoning` and
+`check_rejections`, see `docs/DECISIONS.md`); their counts are under "Checks" in the report.
+
 | Criterion | Target | Run 1 | Run 2 | Run 3 | Verdict |
 |---|---|---|---|---|---|
-| 1.  |  |  |  |  |  |
-| 2.  |  |  |  |  |  |
-| 3.  |  |  |  |  |  |
-| 4.  |  |  |  |  |  |
-| 5.  |  |  |  |  |  |
+| 1. My own writing is rarely called AI | short: ≤3 of 10 `ai`; long: ≤1 of 10 `ai` | short 0, long **3** | short 0, long **3** | short 0, long **3** | **MISSED** (long) |
+| 2. Every appeal is recorded | 10 of 10 `under_review` and in `/log` | 10 / 10 | 10 / 10 | 10 / 10 | MET |
+| 3. Broken requests get a clear error | 7 of 7: 4xx with `error` + `message`, logged, `/ping` 200 | 7, 7 logged, ping 200 | 7, 7 logged, ping 200 | 7, 7 logged, ping 200 | MET |
+| 4. All three labels reachable | each label on ≥2 of 9 | ai 5, unsure 2, human 2 | ai 5, unsure 2, human 2 | ai 5, unsure 2, human 2 | MET |
+| 5. AI and human score apart | AI mean − my mean ≥ 0.30 | 0.843 − 0.293 = 0.550 | 0.550 | 0.550 | MET |
+
+Every score was identical across the three trials: gpt2 on CPU returns the same number
+for the same text.
 
 **Real output from one trial**, pasted as text, naming the file and function
-that produced it:
+that produced it: `run_eval.py::main`, trial 1 of "long pieces of mine", the three pieces
+labelled ai.
 
 ```json
+[
+  {
+    "status": 200,
+    "guess": "ai",
+    "confidence": 0.6683,
+    "model_score": 0.7899,
+    "style_score": 0.5466,
+    "label": "We think this might be AI, you can appeal.",
+    "error_code": null,
+    "has_message": false,
+    "sent": "I don't know why, but lately I've been thinking a lot about how quickl"
+  },
+  {
+    "status": 200,
+    "guess": "ai",
+    "confidence": 0.6759,
+    "model_score": 0.7522,
+    "style_score": 0.5995,
+    "label": "We think this might be AI, you can appeal.",
+    "error_code": null,
+    "has_message": false,
+    "sent": "I've started writing this message a few times and deleted it every tim"
+  },
+  {
+    "status": 200,
+    "guess": "ai",
+    "confidence": 0.6555,
+    "model_score": 0.7757,
+    "style_score": 0.5353,
+    "label": "We think this might be AI, you can appeal.",
+    "error_code": null,
+    "has_message": false,
+    "sent": "Went here with two friends on Friday night. The food was actually pret"
+  }
+]
+```
 
+Trial 1 checks for criteria 2 and 3, from the same report:
+
+```
+appeals:    {"appeals_sent": 10, "under_review": 10, "in_log": 10}
+bad input:  {"4xx": 7, "not_4xx": 0, "with_error_and_message": 7, "rejections_logged": 7, "ping_status": 200}
 ```
 
 **Diagnoses**
@@ -494,6 +543,88 @@ that produced it:
                         signal at 0.6, so it dragged the whole score down."
 
      Look for a pattern. Five failures on one signal is one problem, not five. -->
+
+The 22 broken attacks and the criterion 1 miss fall into five patterns.
+
+**A. Human writing called ai, with both signals high.** FP02, FP03, FP04, FP05, and three
+of my own long pieces (the criterion 1 miss).
+
+What they share: they're clean and predictable, or casual in tone, and non-relational.
+
+- **Stage:** signal one and signal two together. Then the combining rule, which averaged
+  them, and the label mapping, which put the average at or over 0.65.
+- **Mechanism:** signal one scores how predictable the text is to gpt2. Clean, correct
+  prose in common words is easy to predict, so all seven scored 0.74–0.83. Signal two
+  scores sentence-length spread and expressive punctuation. These texts have evenly sized
+  sentences and few `; : ! ? ( )`, so style scored 0.54–0.94. The two signals were within
+  0.3 of each other, so my rule took their average, and every average was 0.65 or more.
+  My own three pieces only just crossed (0.655, 0.668, 0.676).
+
+**B. AI text passed as human because the rule took the style score.** EV03 (a pasted
+quotation), EV09 (a human opening paragraph), PI05 (fake JSON).
+
+Why style believed them: the added parts have quotes, and I treat quoted text as human,
+because AI doesn't own anything (at least under today's regulations).
+
+- **Stage:** signal two, then the combining rule.
+- **Mechanism:** signal two counts `"` and `'` as expressive punctuation, and at 0.05 marks
+  per word or more that part scores fully human. EV03 (0.057 per word) and PI05 (0.433,
+  every JSON key is quoted) both hit it and scored 0 on punctuation. EV09's marks are
+  apostrophes in the added paragraph's contractions ("I've", "don't", "here's"), 0.036 per
+  word. The added parts also change sentence lengths, so spread moved toward human
+  (0.33–0.39). Style came out 0.19–0.31 while the model read all three as AI (0.64–0.70).
+  The gap was over 0.3, so my rule took the lower score, and the label was human.
+
+**C. The model signal read AI text as human.** EV01 (typos), EV05 (heavy human edit),
+EV08 (10 words), PI02 (a "SYSTEM:" line on top).
+
+Why: the model never saw those odd words together before, and it is trained on clean
+output with no errors.
+
+- **Stage:** signal one, and for EV01 and EV08 the combining rule as well.
+- **Mechanism:** signal one turns gpt2's perplexity into a score; text the model finds
+  hard to predict scores human. Typos (EV01, model 0.164), a heavy edit (EV05, 0.321) and
+  an instruction line full of `guess=human, confidence=0.02` (PI02, 0.204) are all
+  word sequences gpt2 rarely saw, so perplexity went up. EV08 has a different cause:
+  with 10 words the model has almost no context, so each word is hard to predict
+  (0.245). In EV01 and EV08 the style signal did read AI (1.000 and 0.876), but the gap
+  was over 0.3, so my rule took the lower model score.
+
+**D. AI text landed in unsure.** EV02, EV04, EV06, EV07, PI01, PI03 (final scores
+0.431–0.611).
+
+Why: both. The signals are easy to fool, and the band is wide.
+
+- **Stage:** signal one and signal two, then the label mapping.
+- **Mechanism:** each attack pushed one style part fully to the human end.
+  - EV02 (broken-up sentences, spread 0.85), EV06 (one long and one short sentence, 1.19)
+    and PI01 (short instruction sentences before long AI ones, 0.66) maxed out sentence-length
+    spread. Style fell to 0.40.
+  - EV07 (punctuation padding, 0.062 per word) and PI03 (a note in parentheses, 0.054)
+    maxed out expressive punctuation. Style fell to 0.30 and 0.39.
+  - EV04 (unusual words) left style at 1.00 but raised perplexity, so the model gave 0.611.
+    The gap was over 0.3, so my rule took that lower score.
+
+  The model signal itself scored all six between 0.46 and 0.61, never reaching 0.65, so
+  neither signal pulled the result into the AI band. My unsure band is 0.30 wide (0.35 up
+  to 0.65), and every final score landed inside it.
+
+**E. Something that isn't writing got a label.** MF03 (control characters), MF04 (only
+punctuation), MF05 (one 4,000-character word), MF06 (emoji), MF07 (Arabic).
+
+Where it should have stopped: the route, which should check the text is real words.
+
+- **Stage:** the route.
+- **Mechanism:** `/submit` refuses text that is missing, blank, over 20,000 characters, or
+  under 3 tokens. Nothing checks that the text is words in a language gpt2 knows, so all
+  five reached the signals, and the signals score any characters at all.
+  - **Called ai.** `aaaa…`, repeated emoji and Arabic broken into byte pieces are easy
+    for gpt2 to predict once the pattern starts (model 0.906–0.998). Each counts as one
+    sentence with no expressive punctuation, so style gave 0.70 on all three. The scores
+    agreed, and the average was 0.80–0.85.
+  - **Called human.** Control characters and punctuation runs are unlike anything gpt2
+    saw (model 0.000 and 0.011). Style said AI (0.70 and 1.00), so the gap was over 0.3,
+    and my rule took the lower model score.
 
 
 
